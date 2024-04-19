@@ -1,45 +1,39 @@
-import express from 'express';
-import { get ,    merge} from 'lodash';
-import { getUserBySessionToken } from '../models/user.model';
 
-
-export const isAuthenticated = async (req: express.Request , res: express.Response, next: express.NextFunction) => {
-    try {
-        const sessionToken = req.cookies['HONG-AUTH'];
-        if(!sessionToken){
-            return res.sendStatus(403);
-        }
-        const existingUser = await getUserBySessionToken(sessionToken);
-        if(!existingUser){
-            return res.sendStatus(403);
-        }
-
-        merge(req, {identity: existingUser});
-
-        return next();
-
-    } catch (error) {
-        console.error(error); 
-        return res.status(500);
+import { Request, Response, NextFunction } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { User, UserModel } from '../models/user.model';
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
     }
+  }
 }
 
-export const isOwner = async(req: express.Request, res: express.Response, next: express.NextFunction) => {
-    try {
-        const { id } = req.params;
-        const currentUserId = get(req, 'identity._id') as unknown as string;
-
-        if (!currentUserId) {
-          return res.sendStatus(400);
-        }
-
-        if (currentUserId.toString() !== id) {
-          return res.sendStatus(403);
-        }
-
-        next();
-    } catch (error) {
-        console.error(error); 
-        return res.status(500);
+export const isAuthenticated = async(req: Request, res: Response, next: NextFunction) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    const user = await UserModel.findById((decoded as any).userId);
+    if (!user) {
+      throw new Error('User not found!');
     }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Error authenticating user:', error);
+    res.status(403).json({ message: 'Forbidden' });
+  }
 }
+export const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const user = req.user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).send({ error: 'Unauthorized access!' });
+  }
+  next();
+};
+

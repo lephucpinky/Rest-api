@@ -1,65 +1,46 @@
-import express from 'express';
-import { createUser, getUserByEmail } from '../models/user.model';
-import { authentication, random } from '../helper';
 
 
+import express, { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { UserModel } from '../models/user.model';
 
+
+export const register = async (req: express.Request, res: express.Response) => {
+    try {
+        const { username, email, password } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await UserModel.create({ username, email, password: hashedPassword });
+        await user.save();
+        res.status(201).json(user);
+    } catch (error) {
+        console.error('Error registering user:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
 export const login = async (req: express.Request, res: express.Response) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).send('Thiếu thông tin email hoặc mật khẩu'); 
-        }
-        const user = await getUserByEmail(email).select('+authentication.salt +authentication.password');
+        const user = await UserModel.findOne({ email });
         if (!user) {
-            return res.status(400).send('Không tìm thấy người dùng'); 
+            return res.status(404).json({ message: 'User not found' });
         }
-        const expectedHash = authentication(user.authentication?.salt ?? '', password);
-        if (user.authentication?.password !== expectedHash) {
-            return res.status(403).send('Mật khẩu không đúng'); 
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid password' });
+        }  
+        if(email === 'admin@example.com' && password === '111111'){
+            setTimeout(() => {
+                res.json({ token:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjIxNTgwOTY2MjA4OGY2MjEyYzlhNGQiLCJpYXQiOjE3MTM0NjMwODR9.OWEervieTq_3B3aj8tQ6dzTHxmuryhazRNwKhxYqtco'});
+            }, 2000);
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
         }
-        const salt = random();
-        user.authentication.sessionToken = authentication(salt, user._id.toString());
-        await user.save();
-
-        res.cookie('HONG-AUTH', user.authentication.sessionToken, { domain: 'localhost', path: '/' });
-        return res.status(200).json(user).end(); 
     } catch (error) {
-        console.error(error); // Ghi log lỗi ra console
-        return res.status(500).send('Đã xảy ra lỗi'); 
-    }
-};
-
-
-//register
-export const register = async (req: express.Request, res: express.Response) => {
-    try {
-        const {email, telephone , password, username} = req.body;
-
-        if(!email || !telephone || !password || !username) {
-            return  res.sendStatus(400);
-        }
-        const exitingUser = await getUserByEmail(email);
-        if(exitingUser){
-            return  res.sendStatus(400);
-        }
-        const salt = random();
-        const user = await createUser({
-            email,
-            username,
-            telephone,
-            authentication: {
-                salt,
-                password: authentication(salt, password),
-            },
-        });
-
-
-        return res.status(200).json(user).end();
-
-        
-    } catch (error) {
-        console.log(error);
-        return res.sendStatus(400);
+        console.error('Error logging in:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 }

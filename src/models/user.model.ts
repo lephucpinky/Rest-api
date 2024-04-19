@@ -1,27 +1,19 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
+// Define user schema
+export interface User extends Document {
+  username: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'employee' 
+}
 
-
-const UserSchema = new mongoose.Schema({
-    username: {type: String, require:true},
-    email: {type: String, require:true},
-    telephone: {type: Number, require:true},
-    authentication: {
-        password: {type:String, require:true, select:false},
-        salt:  {type:String, select:false},
-        sessionToken: {type:String, select:false},
-    }
+const userSchema = new Schema<User>({
+  username: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'employee'], default: 'admin' }, // Default role is 'customer'
 });
 
-
-export const UserModel = mongoose.model('User', UserSchema);
-export const getUsers  = () => UserModel.find();
-export const getUserByEmail = (email:string) => UserModel.findOne({email});
-export const getUserBySessionToken = (sessionToken: string) => UserModel.findOne({
-    'authentication.sessionToken': sessionToken,
-});
-export const getUserById = (id:string) => UserModel.findById(id);
-export const createUser = (values: Record<string, any>) => new UserModel(values).save().then((user)=> user.toObject());
-export const deleteUserById = (id:string) => UserModel.findOneAndDelete({_id: id});
-export const updateUserById = (id:string, values: Record<string, any>) => UserModel.findByIdAndUpdate(id, values);
-
+// Define and export the User model
+export const UserModel = mongoose.model<User>('User', userSchema);
