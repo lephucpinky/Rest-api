@@ -14,7 +14,7 @@ const userSchema = new Schema<User>({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'employee'], default: 'admin' }, 
+  role: { type: String, enum: ['admin', 'employee']}, 
 });
 
 userSchema.pre<User>("save", async function (next) {

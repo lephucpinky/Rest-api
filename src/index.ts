@@ -5,8 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import ConnectDb from './utils/db';
 import router from './router';
-import passport from 'passport';
-import passportMiddleware from "./middleware/passport.config";
+
 
 const app = express();
 app.use(cors({
@@ -15,8 +14,6 @@ app.use(cors({
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(bodyParser.json());
-app.use(passport.initialize());
-passport.use(passportMiddleware)
 
 
 
