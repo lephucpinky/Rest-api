@@ -1,12 +1,15 @@
 import express from 'express';
-import Authentication from './Authentication';
-import Employee from './Employee';
+
+import authRoute from './authRoute';
+import customer from './customer';
+import user from './user';
 
 
 const router = express.Router();
 
 export default (): express.Router => {
-    Authentication(router);
-    Employee(router);
+    authRoute(router);
+    customer(router);
+    user(router);
     return router;
 }

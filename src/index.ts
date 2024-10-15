@@ -7,6 +7,7 @@ import ConnectDb from './utils/db';
 import router from './router';
 
 
+
 const app = express();
 app.use(cors({
   credentials:true,
