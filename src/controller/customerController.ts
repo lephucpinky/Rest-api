@@ -77,7 +77,7 @@ exports.deleteCustomer =  async(req: Request, res: Response, next: NextFunction)
         const customer = await Customer.findByIdAndDelete(req.params.customer_id);
         res.status(200).json({
             success: true,
-            customer,
+            message: "customer deleted",
         })
     } catch (error) {
         console.log(error);
